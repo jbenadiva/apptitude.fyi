@@ -1,145 +1,57 @@
 import os
-import redis
-import logging
-
-from dotenv import load_dotenv
-from flask import Flask, redirect, render_template, request, url_for, jsonify
-from celery import Celery, states
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-logger.propagate = True
-
-load_dotenv()
 
 import openai
+from flask import Flask, redirect, render_template, request, url_for
 
 app = Flask(__name__)
-openai.api_key = os.environ["OPENAI_API_KEY"]
-redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
-r = redis.from_url(redis_url)
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
-def make_celery(app):
-    celery = Celery(
-        app.import_name,
-        backend=app.config['CELERY_RESULT_BACKEND'],
-        broker=app.config['CELERY_BROKER_URL']
-    )
-    celery.conf.update(app.config)
-
-    class ContextTask(celery.Task):
-        def __call__(self, *args, **kwargs):
-            with app.app_context():
-                return self.run(*args, **kwargs)
-
-    celery.Task = ContextTask
-    return celery
-
-app.config.update(
-    CELERY_BROKER_URL=os.environ.get('REDIS_URL', 'redis://localhost:6379/0'),
-    CELERY_RESULT_BACKEND=os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
-)
-
-celery = make_celery(app)
 
 @app.route("/", methods=("GET", "POST"))
 def index():
-    logger.info("Handling a request to /")
     if request.method == "POST":
-        locations = request.form.getlist("locations")
-        nights = request.form.getlist("nights")
-        travel_desires = request.form.getlist("travel_desires")
+        preference = request.form["preference"]
+        work_life_balance = request.form["work_life_balance"]
+        salary_desire = request.form["salary_desire"]
 
-        prompt = generate_prompt(locations, nights, travel_desires)
-        logger.info(f"Generated prompt: {prompt}")
-        task = openai_task.delay(prompt)
+        prompt = generate_prompt(preference, work_life_balance, salary_desire)
 
-        task_id = task.id
-        logger.info("Created task with ID: %s", task_id)
-
-        # Return the task id
-        return jsonify({"task_id": task_id}), 202
-
-    return render_template("index.html")
-
-@app.route("/status/<task_id>")
-def taskstatus(task_id):
-    task = openai_task.AsyncResult(task_id)
-    if task.state == 'PENDING':
-        response = {
-            'state': task.state,
-            'status': 'Pending...'
-        }
-    elif task.state == 'SUCCESS':
-        response = {
-            'state': task.state,
-            'result': task.result  # Get the result from the task
-        }
-    else:
-        # something went wrong in the background job
-        response = {
-            'state': task.state,
-            'status': str(task.info),  # this is the exception raised
-        }
-    return jsonify(response)  # Make sure to jsonify the response
-
-
-@celery.task(bind=True)
-def openai_task(self, prompt):
-    try:
-        print("Starting API call...")
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are a seasoned travel agent with a knack for creating detailed and personalized travel itineraries."},
-                {"role": "user", "content": prompt},
-            ],
+                {
+                    "role": "system",
+                    "content": "You are an excellent career consultant, in fact known as one of the best in the world.You have decades of experience matching high-potential clients with jobs that fit their experience and interests.  Everyone of your customers has loved the job opportunities you’ve found that fit them! You have a new client."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
         )
-        logger.info("API call completed. Processing response...")
-        result = response.choices[0].message['content'].strip()
-        logger.info("Response processed. Storing result in Redis...")
-        task_id = self.request.id
-        logger.info("Task ID: %s", task_id)
+        return redirect(url_for("index", result=response['choices'][0]['message']['content'].strip()))
 
-        # Store the result in Redis
-        r.set(self.request.id, result)
-        logger.info("Result stored in Redis. Task completed.")
-        logger.info("Result: %s", result)
-    except Exception as e:
-        logger.error(f"An error occurred in the task: {e}")
-        raise
+    result = request.args.get("result")
+    return render_template("index.html", result=result)
 
 
-@app.route("/result/<task_id>")
-def result(task_id):
-    # Retrieve the result from Redis
-    result = r.get(task_id)
-    if result is None:
-        # If there's no result, the task might still be running
-        return "Your request is still being processed. Please check back later.", 202
-    else:
-        return result.decode()  # decode bytes to string before returning
+def generate_prompt(preference, work_life_balance, salary_desire):
+    return f"""
 
-def generate_prompt(locations, nights, travel_desires):
-    itinerary = "\n".join([f"I'm traveling to {loc} for {night} nights" for loc, night in zip(locations, nights)])
-    preferences = ", ".join(travel_desires)
+    Your client {preference} and has a {work_life_balance} and a salary preference in the range of {salary_desire}.
 
-    prompt = (f"{itinerary}. "
-              f"I enjoy {preferences}. "
-              f"Could you please generate a very specific and personalized itinerary for me, "
-              f"including some hidden gems, specific bars, and restaurants? "
-              f"Please also consider travel times to optimize my schedule.")
+You need to generate five job recommendations for this new client that is most fitting to them based on their background, preferences and goals. Your recommendations should include the job title, and 3-4 sentences about why this job is fitting for the client. Be as specific as possible to the client’s preferences and resume. Here is an example output of a different client that used you in the past. Keep in mind this is NOT your current client.: 
 
-    return prompt
+Senior Product Manager/ Director of Product: Given your experience as a VP of Product in a startup and your recent internship at Amazon Web Services, a leadership role in product management at a tech firm or startup would be a good fit. This could be either a continuation at Amazon or a similar role in another tech giant or promising startup. 
 
+Venture Capitalist: Your experience at Viola Group and your technical background make you an excellent candidate for a role in a venture capital firm, specifically in a fund that focuses on fintech or technology investments. 
+
+Tech-focused Management Consultant: Consulting firms are always looking for individuals with a solid understanding of technology and management. Your education and experience make you a strong candidate for these roles. 
+
+Product Strategy: Companies, especially in the tech and startup domain, need strategists who understand the product side well. Your background makes you suitable for a product strategy role. 
+
+Startup Founder/Co-founder: Given your entrepreneurial studies at Wharton, along with your experience as a founding team member at Giraffe Invest, you might consider launching your own venture.
+    """
 
 if __name__ == "__main__":
-    try:
-        r = redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'))
-        r.set('test', 'test_value')
-        value = r.get('test')
-        logger.info(f"Redis test value: {value}")
-    except Exception as e:
-        logger.error(f"Error connecting to Redis: {e}")
-    app.run()
+    app.run(debug=True)
