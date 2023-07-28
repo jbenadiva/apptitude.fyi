@@ -8,12 +8,25 @@
 <body>
   <h1>Apptitude.fyi</h1>
   <h3>Enter your job preferences</h3>
-  <form action="/" method="post">
-    <input type="text" name="preference" placeholder="Enter what you like to do" required />
-    <input type="text" name="work_life_balance" placeholder="Enter your work-life balance" required />
-    <input type="text" name="salary_desire" placeholder="Enter your desired salary" required />
-
-    <input type="submit" value="Generate Job Recommendations" />
+  <form action="/" method="post" enctype="multipart/form-data">
+    {{ form.hidden_tag() }}
+    <p>
+      {{ form.preference.label }}<br>
+      {{ form.preference(size=32) }}
+    </p>
+    <p>
+      {{ form.work_life_balance.label }}<br>
+      {{ form.work_life_balance(size=32) }}
+    </p>
+    <p>
+      {{ form.salary_desire.label }}<br>
+      {{ form.salary_desire(size=32) }}
+    </p>
+    <p>
+      {{ form.resume.label }}<br>
+      {{ form.resume() }}
+    </p>
+    <p>{{ form.submit() }}</p>
   </form>
   {% if result %}
   <div class="result">{{ result }}</div>
