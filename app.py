@@ -73,6 +73,10 @@ def index():
                 }
             ]
         )
+        # this should be used to parse the response for five different options, each with a leading number and a period. The response then should be printed and shown to the user according to the different numbers. Each of the recommendations should be saved somewhere
+        logger.info(f"Generated response: {response}")
+
+        # Redirect to the index page and pass the response as a parameter
         return redirect(url_for("index", result=response['choices'][0]['message']['content'].strip()))
 
     result = request.args.get("result")
