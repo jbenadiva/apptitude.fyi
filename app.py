@@ -1,67 +1,80 @@
 import os
-from flask import Flask, redirect, render_template, request, url_for
+from flask import Flask, request, jsonify, redirect, url_for
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, FileField, validators
 from werkzeug.utils import secure_filename
 from docx import Document
 from PyPDF2 import PdfReader
-import openai
+from openai import OpenAI
 import logging
+from dotenv import load_dotenv
+from flask_cors import CORS
+load_dotenv()  # This loads the environment variables from the .env file into the environment
 
 
 app = Flask(__name__)
+CORS(app)
 app.config['SECRET_KEY'] = 'mytemporarykey'
 app.config['UPLOAD_FOLDER'] = 'C:/Users/Josh Benadiva/git/Apptitude/uploads'
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
-
-# Configure logging
+client = OpenAI(
+    api_key=os.environ.get("OPENAI_API_KEY"),
+)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-logger.propagate = True
+
+
 
 class JobForm(FlaskForm):
+    class Meta:
+        csrf = False  # Disable CSRF for this form
+
     preference = StringField('Enter what you like to do', [validators.DataRequired()])
     work_life_balance = StringField('Enter your work-life balance', [validators.DataRequired()])
     salary_desire = StringField('Enter your desired salary', [validators.DataRequired()])
     resume = FileField('Upload your resume', [validators.DataRequired()])
     submit = SubmitField('Generate Job Recommendations')
 
-
-
-@app.route("/", methods=("GET", "POST"))
+@app.route("/", methods=["POST"])
 def index():
-    form = JobForm()
+    print("Request received")
+    form = JobForm(request.form, meta={'csrf': False})  # Ensure CSRF is disabled
+    if request.method == 'POST' and 'resume' in request.files:
+        form.resume.data = request.files['resume']
+        # add debugging print statements
+        print(form.resume.data)
+        print(form.validate_on_submit())
+
     if form.validate_on_submit():
-        # Save the uploaded file
+        # print debug   ging statements
+        print("Form validated")
+        print(form.resume.data)
         resume_file = form.resume.data
         filename = secure_filename(resume_file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         resume_file.save(filepath)
-
-        # Log the filename
-        logger.info(f"Saved file: {filename}")
-
-        # Read the file content
-        if filename.endswith('.docx'):
-            resume_content = read_docx(filepath)
-        elif filename.endswith('.pdf'):
-            resume_content = read_pdf(filepath)
-        else:
-            return "Invalid file format. Please upload a .docx or .pdf file."
+        # print debugging statements
+        print("File saved")
+        print(filepath)
 
         # Log the content of the file
-        logger.info(f"Parsed resume: {resume_content}")
+        print("Parsed resume: {filename}")
 
         preference = form.preference.data
         work_life_balance = form.work_life_balance.data
         salary_desire = form.salary_desire.data
+        # print out the form data
+        print(preference)
+        print(work_life_balance)
+        print(salary_desire)
 
         # Include the resume content in the prompt
-        prompt = generate_prompt(preference, work_life_balance, salary_desire, resume_content)
+        prompt = generate_prompt(preference, work_life_balance, salary_desire, filename)
+        #check the prompt
+        print(prompt)
 
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
+        response = client.chat.completions.create(
+            model="gpt-4o",
             messages=[
                 {
                     "role": "system",
@@ -73,16 +86,12 @@ def index():
                 }
             ]
         )
-        # this should be used to parse the response for five different options, each with a leading number and a period. The response then should be printed and shown to the user according to the different numbers. Each of the recommendations should be saved somewhere
-        logger.info(f"Generated response: {response}")
-
-        # Redirect to the index page and pass the response as a parameter
-        return redirect(url_for("index", result=response['choices'][0]['message']['content'].strip()))
-
-    result = request.args.get("result")
-    return render_template("index.html", form=form, result=result)
-
-
+        print(response)
+        recommendations = response.choices[0].message.content
+        return jsonify({"result": recommendations})
+    else:
+        errors = form.errors
+        return jsonify(errors)
 def read_docx(file):
     doc = Document(file)
     return ' '.join([paragraph.text for paragraph in doc.paragraphs])
