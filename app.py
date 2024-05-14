@@ -21,8 +21,15 @@ app.config['SECRET_KEY'] = 'mytemporarykey'
 app.config['UPLOAD_FOLDER'] = 'C:/Users/Josh Benadiva/git/Apptitude/uploads'
 app.config['MONGO_URI'] = os.getenv('MONGO_URI')
 
-client = MongoClient(app.config['MONGO_URI'])
-db = client.apptitude  # Use your database name, assumed 'apptitude' here
+try:
+    client = MongoClient(app.config['MONGO_URI'], serverSelectionTimeoutMS=5000)  # Timeout for MongoDB connection
+    client.server_info()  # Attempt to get server info to check connection
+    print("Connected to MongoDB")
+except Exception as e:
+    print("An error occurred while connecting to MongoDB:", str(e))
+
+db = client.apptitude  # Assume 'apptitude' is the correct database name
+
 client = OpenAI(
     api_key=os.environ.get("OPENAI_API_KEY"),
 )
@@ -42,6 +49,22 @@ def read_pdf(path):
     for page in pdf.pages:
         text += page.extract_text()
     return text
+
+def insert_user_data(user_data):
+    """ Insert or update user data in MongoDB """
+    try:
+        result = db['apptitude-collection'].update_one(
+            {"userId": user_data["userId"]},
+            {"$set": user_data},
+            upsert=True
+        )
+        print("Data inserted successfully:", result.upserted_id)
+        return result
+    except Exception as e:
+        print("An error occurred while inserting data:", str(e))
+        return None
+
+
 
 class JobForm(FlaskForm):
     class Meta:
@@ -109,7 +132,23 @@ def index():
         )
         print(response)
         recommendations = response.choices[0].message.content
+        user_data = {
+            "userId": str(os.urandom(16)),  # Generate a random ID for the user
+            "preferences": {
+                "workStyle": request.form['work_life_balance'],
+                "salaryRange": request.form['salary_desire'],
+                "workLifeBalance": request.form['work_life_balance'],
+                "location": "Unknown"
+            },
+            "resume": {
+                "originalFilename": filename,
+                "parsedText": text
+            },
+            "recommendations": recommendations
+        }
+        insert_user_data(user_data)
         return jsonify({"result": recommendations})
+        
     else:
         errors = form.errors
         return jsonify(errors)
