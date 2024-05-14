@@ -1,0 +1,26 @@
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 50px;
+    background-color: #F5FBFF;
+  }
+  
+  .logo-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .contact-info {
+    text-align: left;
+    color: #393E46;
+    font-family: 'Roboto', sans-serif;
+    font-weight: 600;
+  }
+  
+  .linkedin-link {
+    text-decoration: underline;
+    color: #0F91D2;
+  }
+  

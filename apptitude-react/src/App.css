@@ -1,38 +1,80 @@
+/* Overall layout adjustments */
+
 .App {
-  text-align: center;
+  font-family: 'Roboto', sans-serif; /* Consistent font for the app */
+  color: #393E46; /* Primary text color */
+  background-color: #F5FBFF; /* Light blue background for the app */
+  padding: 40px; /* More padding for overall app */
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+/* Header and Titles */
+h1 {
+  text-align: center; /* Align header to the center */
+  font-weight: 600; /* Lighter font weight for headers */
+  font-size: 80px;
+  color: #393E46;
+
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
+/* paragraph styling */
+h2 {
+  /*add some padding to the left and right of the screen*/
+  padding: 0 350px;
+  text-align: left;
+  /* semi-bold font weight */
+  font-weight: 500; 
+  font-family: 'Mulish', sans-serif; /* Font for paragraphs */
+  font-size: 36px; /* Larger font size for paragraphs */
+  color: #3DB08B; /* Green color for paragraphs */
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+}
+/* Form styling */
+form {
+  width: 100%; /* Full width of its container to match the design */
+  max-width: 600px; /* Limit form width for better form control */
+  margin: 0 auto; /* Center form horizontally */
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
+}
+
+/* Improved input and button styling */
+input[type="text"], input[type="file"], input[type="range"], button {
+  width: 90%; /* Making inputs take 90% of form's width */
+  padding: 12px;
+  margin: 10px 0; /* Vertical margin for separation */
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+/*label styling*/
+label {
+  /*center align the label*/
+  text-align: center;
+  /*font mulish*/
+  font-family: 'Mulish', sans-serif;
+  font-size: 24px;
+  font-weight: 500;
+  margin: 10px 0;
+}
+
+
+/* Button styling */
+button {
+  background-color: #2C97EB; /* Green background */
   color: white;
+  border: none;
+  padding: 12px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  width: 40%; /* Full width button */
+  /* Center button */
+  display: block;
+  margin: 20px auto;
 }
 
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+button:hover {
+  background-color: #205D8C;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  transition: all 0.3s ease;
 }

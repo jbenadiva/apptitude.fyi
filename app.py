@@ -64,14 +64,32 @@ def insert_user_data(user_data):
         print("An error occurred while inserting data:", str(e))
         return None
 
+def parse_recommendations(text):
+    """ Parse the plain text recommendations into a structured dictionary """
+    recommendations = {}
+    lines = text.split('\n')
+    current_key = None
+    for line in lines:
+        if line.strip().startswith(tuple(f"{i}." for i in range(1, 6))):  # Look for lines starting with "1.", "2.", etc.
+            parts = line.split(':', 1)
+            if len(parts) == 2:
+                current_key = parts[0].split('.')[0].strip()  # Key is the number before the period
+                recommendations[current_key] = {
+                    'title': parts[0].split('.', 1)[1].strip(),  # Everything after the number and before the colon
+                    'description': parts[1].strip()  # Everything after the colon
+                }
+        elif current_key and 'description' in recommendations[current_key]:
+            recommendations[current_key]['description'] += ' ' + line.strip()
+
+    return recommendations
+
 
 
 class JobForm(FlaskForm):
     class Meta:
         csrf = False  # Disable CSRF for this form
 
-    preference = StringField('Enter what you like to do', [validators.DataRequired()])
-    work_life_balance = StringField('Enter your work-life balance', [validators.DataRequired()])
+    work_pace = StringField('Enter your work-life balance', [validators.DataRequired()])
     salary_desire = StringField('Enter your desired salary', [validators.DataRequired()])
     resume = FileField('Upload your resume', [validators.DataRequired()])
     submit = SubmitField('Generate Job Recommendations')
@@ -104,16 +122,16 @@ def index():
         else:
             return jsonify({'error': 'Unsupported file type'}), 400
 
-        preference = form.preference.data
-        work_life_balance = form.work_life_balance.data
+        work_pace = request.form['work_pace']
         salary_desire = form.salary_desire.data
+        work_pace_text = "relaxed pace" if int(work_pace) < 30 else "medium pace" if int(work_pace) <= 70 else "fast-paced"
+
         # print out the form data
-        print(preference)
-        print(work_life_balance)
+        print(work_pace)
         print(salary_desire)
 
         # Include the resume content in the prompt
-        prompt = generate_prompt(preference, work_life_balance, salary_desire, text)
+        prompt = generate_prompt(work_pace_text, salary_desire, text)
         #check the prompt
         print(prompt)
 
@@ -131,23 +149,23 @@ def index():
             ]
         )
         print(response)
-        recommendations = response.choices[0].message.content
+        raw_recommendations = response.choices[0].message.content
+        structured_recommendations = parse_recommendations(raw_recommendations)        
         user_data = {
             "userId": str(os.urandom(16)),  # Generate a random ID for the user
             "preferences": {
-                "workStyle": request.form['work_life_balance'],
+                "workPace": work_pace_text,
                 "salaryRange": request.form['salary_desire'],
-                "workLifeBalance": request.form['work_life_balance'],
                 "location": "Unknown"
             },
             "resume": {
                 "originalFilename": filename,
                 "parsedText": text
             },
-            "recommendations": recommendations
+            "recommendations": structured_recommendations
         }
         insert_user_data(user_data)
-        return jsonify({"result": recommendations})
+        return jsonify({"result": structured_recommendations})
         
     else:
         errors = form.errors
@@ -164,10 +182,10 @@ def read_pdf(path):
         text += page.extract_text()
     return text
 
-def generate_prompt(preference, work_life_balance, salary_desire, resume_content):
+def generate_prompt(work_pace, salary_desire, resume_content):
     # Include resume_content in your prompt
     return f"""
-    Your client {preference} and has a {work_life_balance} and a salary preference in the range of {salary_desire}. The client's resume content is as follows:
+    Your client enjoys a pace of work that is {work_pace} and a salary preference in the range of {salary_desire}. The client's resume content is as follows:
 
     {resume_content}
 
