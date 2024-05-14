@@ -10,20 +10,38 @@ import logging
 from dotenv import load_dotenv
 from flask_cors import CORS
 load_dotenv()  # This loads the environment variables from the .env file into the environment
+from pymongo import MongoClient
+
+
 
 
 app = Flask(__name__)
 CORS(app)
 app.config['SECRET_KEY'] = 'mytemporarykey'
 app.config['UPLOAD_FOLDER'] = 'C:/Users/Josh Benadiva/git/Apptitude/uploads'
+app.config['MONGO_URI'] = os.getenv('MONGO_URI')
 
+client = MongoClient(app.config['MONGO_URI'])
+db = client.apptitude  # Use your database name, assumed 'apptitude' here
 client = OpenAI(
     api_key=os.environ.get("OPENAI_API_KEY"),
 )
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'pdf', 'docx'}
 
+def read_docx(file):
+    doc = Document(file)
+    return ' '.join([paragraph.text for paragraph in doc.paragraphs])
+
+def read_pdf(path):
+    pdf = PdfReader(path)
+    text = ''
+    for page in pdf.pages:
+        text += page.extract_text()
+    return text
 
 class JobForm(FlaskForm):
     class Meta:
@@ -39,26 +57,29 @@ class JobForm(FlaskForm):
 def index():
     print("Request received")
     form = JobForm(request.form, meta={'csrf': False})  # Ensure CSRF is disabled
-    if request.method == 'POST' and 'resume' in request.files:
-        form.resume.data = request.files['resume']
-        # add debugging print statements
-        print(form.resume.data)
-        print(form.validate_on_submit())
-
-    if form.validate_on_submit():
-        # print debug   ging statements
-        print("Form validated")
-        print(form.resume.data)
-        resume_file = form.resume.data
-        filename = secure_filename(resume_file.filename)
+        # Check if the post request has the file part
+    if 'resume' not in request.files:
+        return jsonify({'error': 'No resume file part'}), 400
+    file = request.files['resume']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        print(f"Filename: {filename}")
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        resume_file.save(filepath)
-        # print debugging statements
-        print("File saved")
-        print(filepath)
-
-        # Log the content of the file
-        print("Parsed resume: {filename}")
+        print(f"Saving file to {filepath}")
+        file.save(filepath)
+        print(f"File saved to {filepath}")
+        
+        # Process the file based on its extension
+        if filename.endswith('.pdf'):
+            text = read_pdf(filepath)
+            print(text)
+        elif filename.endswith('.docx'):
+            text = read_docx(filepath)
+            print(text)
+        else:
+            return jsonify({'error': 'Unsupported file type'}), 400
 
         preference = form.preference.data
         work_life_balance = form.work_life_balance.data
@@ -69,7 +90,7 @@ def index():
         print(salary_desire)
 
         # Include the resume content in the prompt
-        prompt = generate_prompt(preference, work_life_balance, salary_desire, filename)
+        prompt = generate_prompt(preference, work_life_balance, salary_desire, text)
         #check the prompt
         print(prompt)
 
