@@ -2,19 +2,33 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import './App.css';
 import Header from './components/Header';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faBrain, faCheckSquare, faDatabase, faTasks } from '@fortawesome/free-solid-svg-icons';
 
 
 function App() {
   const [workPace, setWorkPace] = useState(50); // Default pace value
   const [salaryDesire, setSalaryDesire] = useState('');
   const [resume, setResume] = useState(null);
+  const [workStyles, setWorkStyles] = useState([]);
   const [recommendations, setRecommendations] = useState(null);
   const [uploadError, setUploadError] = useState('');
+
+  const handleWorkStyleChange = (style) => { // Handler function correctly placed
+    setWorkStyles(prev => {
+      if (prev.includes(style)) {
+        return prev.filter(s => s !== style);
+      } else {
+        return [...prev, style];
+      }
+    });
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     const formData = new FormData();
-    formData.append('work_pace', workPace); // Send work pace
+    formData.append('work_pace', workPace);
+    formData.append('work_styles', JSON.stringify(workStyles)); // Send work styles as a JSON string
     formData.append('salary_desire', salaryDesire);
 
     if (resume && (resume.type === 'application/pdf' || resume.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')) {
@@ -33,6 +47,32 @@ function App() {
       setUploadError('Failed to upload data. Please try again.');
     }
   };
+  const options = [
+    { 
+        id: 'methodical', 
+        label: 'Careful & Methodical', 
+        description: 'I need to plan and think through every possibility and have incredible attention to detail', 
+        icon: faBrain 
+    },
+    { 
+        id: 'innovation', 
+        label: 'Constant innovation', 
+        description: 'I enjoy frequent brainstorming and creativeness', 
+        icon: faCheckSquare 
+    },
+    { 
+        id: 'data-oriented', 
+        label: 'Evidence & data oriented', 
+        description: 'I like to make decisions based on hard evidence and data', 
+        icon: faDatabase 
+    },
+    { 
+        id: 'task-oriented', 
+        label: 'Task-oriented', 
+        description: 'I prefer to get a checklist and knock things off one-by-one!', 
+        icon: faTasks 
+    }
+];
 
   return (
     <div className="App">
@@ -62,6 +102,23 @@ function App() {
             </div>
           </div>
         </div>
+        <div className="work-style">
+                    <label>What is your preferred style of work?</label>
+                    {options.map(option => (
+                    <div key={option.id} onClick={() => handleWorkStyleChange(option.id)} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                        <input
+                            type="checkbox"
+                            id={option.id}
+                            checked={workStyles.includes(option.id)}
+                            onChange={() => handleWorkStyleChange(option.id)}
+                            style={{ marginRight: '10px' }}
+                        />
+                        <FontAwesomeIcon icon={option.icon} style={{ marginRight: '10px' }} />
+                        <label htmlFor={option.id}>{option.label}</label>
+                        <p style={{ marginLeft: '10px' }}>{option.description}</p>
+                    </div>
+                    ))}
+                </div>
           <input type="text" placeholder="Enter your desired salary" value={salaryDesire} onChange={e => setSalaryDesire(e.target.value)} />
           <input type="file" onChange={e => setResume(e.target.files[0])} />
           <button type="submit">+ Generate Job Recommendations</button>

@@ -57,6 +57,36 @@ label {
   font-weight: 500;
   margin: 10px 0;
 }
+.work-style {
+  margin: 20px 0;
+}
+
+.work-style div {
+  margin: 10px 0;
+  padding: 10px;
+  border: 1px solid #667085; /* Border color for the checkbox container */
+  border-radius: 5px;
+  transition: box-shadow 0.3s ease;
+}
+
+.work-style div:hover {
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Hover effect */
+}
+
+.work-style input[type="checkbox"] {
+  accent-color: #2C97EB; /* Custom color for checkbox */
+}
+
+.work-style label {
+  font-weight: bold;
+  margin-right: 10px;
+}
+
+.work-style p {
+  margin-top: 5px;
+  font-size: 14px;
+  color: #555; /* Sub-description color */
+}
 
 
 /* Button styling */
