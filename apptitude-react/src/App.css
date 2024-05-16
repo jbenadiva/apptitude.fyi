@@ -57,35 +57,111 @@ label {
   font-weight: 500;
   margin: 10px 0;
 }
-.work-style {
-  margin: 20px 0;
-}
-
-.work-style div {
-  margin: 10px 0;
+.form-check {
+  display: block;
   padding: 10px;
-  border: 1px solid #667085; /* Border color for the checkbox container */
+  border: 1px solid #ccc;
   border-radius: 5px;
-  transition: box-shadow 0.3s ease;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: box-shadow 0.3s ease, border-color 0.3s ease; /* Ensure smooth transitions */
 }
 
-.work-style div:hover {
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Hover effect */
+.form-check:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2); /* More pronounced shadow */
+  border-color: #667085; /* Change border color on hover for visibility */
 }
 
-.work-style input[type="checkbox"] {
-  accent-color: #2C97EB; /* Custom color for checkbox */
+
+.form-check input[type="checkbox"] {
+  cursor: pointer;
+  float: left; /* Ensures checkbox aligns neatly to the left */
+  margin-right: 10px; /* Space between checkbox and label */
 }
 
-.work-style label {
-  font-weight: bold;
-  margin-right: 10px;
+.option-header {
+  text-align: left;
+  display: block; /* Ensures it takes full width for alignment */
+  color: #344054;
+  font-family: 'Mulish', sans-serif;
+  font-size: 14px;
+  line-height: 150%;
 }
 
 .work-style p {
+  text-align: left;
+  font-family: 'Mulish', sans-serif;
   margin-top: 5px;
+  /*give a bit of padding on the left so that it lines up with the header*/
+  padding-left: 30px;
   font-size: 14px;
-  color: #555; /* Sub-description color */
+  color: #667085;
+}
+
+/* Ensure label takes up the entire width of the container */
+.form-check-label {
+  /*alight left*/
+  text-align: left;
+  display: block;
+  width: 100%;
+}
+.interaction-style p {
+  text-align: left;
+  font-family: 'Mulish', sans-serif;
+  margin-top: 5px;
+  /*give a bit of padding on the left so that it lines up with the header*/
+  padding-left: 30px;
+  font-size: 14px;
+  color: #667085;
+}
+
+
+
+
+
+.upload-section {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.upload-label {
+  font-size: 24px;
+  font-weight: 500;
+  font-family: 'Mulish', sans-serif;
+  color: #344054;
+  margin-bottom: 10px;
+}
+
+.drag-drop-area {
+  border: 2px dashed #ccc;
+  padding: 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: border-color 0.3s ease-in-out;
+}
+
+.drag-drop-area:hover {
+  border-color: #0F91D2;
+}
+
+.file-info {
+  color: rgba(0, 0, 0, 0.4);
+  margin-bottom: 10px;
+}
+
+submitbutton {
+  color: #0F91D2;
+  border: 2px solid #0F91D2;
+  background-color: #fff;
+  padding: 8px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+submitbutton:hover {
+  background-color: #0F91D2;
+  color: #fff;
 }
 
 
@@ -102,6 +178,7 @@ button {
   display: block;
   margin: 20px auto;
 }
+
 
 button:hover {
   background-color: #205D8C;

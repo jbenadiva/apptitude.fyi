@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, redirect, url_for
+from flask import Flask, request, jsonify
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, FileField, validators
 from werkzeug.utils import secure_filename
@@ -9,11 +9,10 @@ from openai import OpenAI
 import logging
 from dotenv import load_dotenv
 from flask_cors import CORS
+import json  # Added import for JSON parsing
+
 load_dotenv()  # This loads the environment variables from the .env file into the environment
 from pymongo import MongoClient
-
-
-
 
 app = Flask(__name__)
 CORS(app)
@@ -83,14 +82,13 @@ def parse_recommendations(text):
 
     return recommendations
 
-
-
 class JobForm(FlaskForm):
     class Meta:
         csrf = False  # Disable CSRF for this form
 
     work_pace = StringField('Enter your work-life balance', [validators.DataRequired()])
-    salary_desire = StringField('Enter your desired salary', [validators.DataRequired()])
+    work_styles = StringField('Enter your work style', [validators.DataRequired()])
+    interaction_styles = StringField('Enter your interaction style', [validators.DataRequired()])
     resume = FileField('Upload your resume', [validators.DataRequired()])
     submit = SubmitField('Generate Job Recommendations')
 
@@ -98,7 +96,8 @@ class JobForm(FlaskForm):
 def index():
     print("Request received")
     form = JobForm(request.form, meta={'csrf': False})  # Ensure CSRF is disabled
-        # Check if the post request has the file part
+
+    # Check if the post request has the file part
     if 'resume' not in request.files:
         return jsonify({'error': 'No resume file part'}), 400
     file = request.files['resume']
@@ -123,16 +122,18 @@ def index():
             return jsonify({'error': 'Unsupported file type'}), 400
 
         work_pace = request.form['work_pace']
-        salary_desire = form.salary_desire.data
         work_pace_text = "relaxed pace" if int(work_pace) < 30 else "medium pace" if int(work_pace) <= 70 else "fast-paced"
+        work_styles = json.loads(request.form['work_styles'])  # Parse the JSON string
+        interaction_styles = json.loads(request.form['interaction_styles'])  # Parse the JSON string
 
-        # print out the form data
+        # Print out the form data
         print(work_pace)
-        print(salary_desire)
+        print(work_styles)
+        print(interaction_styles)
 
         # Include the resume content in the prompt
-        prompt = generate_prompt(work_pace_text, salary_desire, text)
-        #check the prompt
+        prompt = generate_prompt(work_pace_text, work_styles, interaction_styles, text)
+        # Check the prompt
         print(prompt)
 
         response = client.chat.completions.create(
@@ -155,7 +156,8 @@ def index():
             "userId": str(os.urandom(16)),  # Generate a random ID for the user
             "preferences": {
                 "workPace": work_pace_text,
-                "salaryRange": request.form['salary_desire'],
+                "workStyle": work_styles,
+                "interactionStyle": interaction_styles,
                 "location": "Unknown"
             },
             "resume": {
@@ -170,10 +172,10 @@ def index():
     else:
         errors = form.errors
         return jsonify(errors)
+
 def read_docx(file):
     doc = Document(file)
     return ' '.join([paragraph.text for paragraph in doc.paragraphs])
-
 
 def read_pdf(path):
     pdf = PdfReader(path)
@@ -182,10 +184,12 @@ def read_pdf(path):
         text += page.extract_text()
     return text
 
-def generate_prompt(work_pace, salary_desire, resume_content):
+def generate_prompt(work_pace, work_styles, interaction_styles, resume_content):
     # Include resume_content in your prompt
     return f"""
-    Your client enjoys a pace of work that is {work_pace} and a salary preference in the range of {salary_desire}. The client's resume content is as follows:
+    Your client enjoys a pace of work that is {work_pace} and has a strong preference to work in the following styles: {work_styles}. Your client also enjoys the following day-to-day interactions in their job: {interaction_styles}.
+    
+    The client's resume content is as follows:
 
     {resume_content}
 
