@@ -22,13 +22,18 @@ app.config['UPLOAD_FOLDER'] = 'C:/Users/Josh Benadiva/git/Apptitude/uploads'
 app.config['MONGO_URI'] = os.getenv('MONGO_URI')
 
 try:
-    client = MongoClient(app.config['MONGO_URI'], serverSelectionTimeoutMS=5000)  # Timeout for MongoDB connection
-    client.server_info()  # Attempt to get server info to check connection
+    client = MongoClient(app.config['MONGO_URI'], serverSelectionTimeoutMS=5000)
+    client.server_info()
     print("Connected to MongoDB")
 except Exception as e:
+    client = None
     print("An error occurred while connecting to MongoDB:", str(e))
 
-db = client.apptitude  # Assume 'apptitude' is the correct database name
+if client:
+    db = client.apptitude  # Assume 'apptitude' is the correct database name
+else:
+    db = None
+
 
 openai.api_key = os.environ.get("OPENAI_API_KEY")
 logging.basicConfig(level=logging.INFO)
