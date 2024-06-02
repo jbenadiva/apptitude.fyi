@@ -96,11 +96,15 @@ class JobForm(FlaskForm):
     resume = FileField('Upload your resume', [validators.DataRequired()])
     submit = SubmitField('Generate Job Recommendations')
 
-@app.route("/", methods=["POST"])
+@app.route("/", methods=["GET", "POST"])
 def index():
+    if request.method == "GET":
+        return "Welcome to the job recommendations API. Please use POST requests to interact with this endpoint.", 200
+    
     print("Request received")
-    form = JobForm(request.form, meta={'csrf': False})  # Ensure CSRF is disabled
 
+    form = JobForm(request.form, meta={'csrf': False})  # Ensure CSRF is disabled
+    
     # Check if the post request has the file part
     if 'resume' not in request.files:
         return jsonify({'error': 'No resume file part'}), 400
