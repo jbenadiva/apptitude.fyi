@@ -1,4 +1,5 @@
 import os
+import ssl
 from flask import Flask, request, jsonify
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, FileField, validators
@@ -22,13 +23,12 @@ app.config['UPLOAD_FOLDER'] = 'C:/Users/Josh Benadiva/git/Apptitude/uploads'
 app.config['MONGO_URI'] = os.getenv('MONGO_URI')
 
 try:
-    client = MongoClient(app.config['MONGO_URI'], serverSelectionTimeoutMS=5000)
+    client = MongoClient(app.config['MONGO_URI'], serverSelectionTimeoutMS=5000, ssl=True, ssl_cert_reqs=ssl.CERT_NONE)
     client.server_info()
     print("Connected to MongoDB")
 except Exception as e:
     client = None
     print("An error occurred while connecting to MongoDB:", str(e))
-
 if client:
     db = client.apptitude  # Assume 'apptitude' is the correct database name
 else:
@@ -54,17 +54,20 @@ def read_pdf(path):
     return text
 
 def insert_user_data(user_data):
-    """ Insert or update user data in MongoDB """
-    try:
-        result = db['apptitude-collection'].update_one(
-            {"userId": user_data["userId"]},
-            {"$set": user_data},
-            upsert=True
-        )
-        print("Data inserted successfully:", result.upserted_id)
-        return result
-    except Exception as e:
-        print("An error occurred while inserting data:", str(e))
+    if db:
+        try:
+            result = db['apptitude-collection'].update_one(
+                {"userId": user_data["userId"]},
+                {"$set": user_data},
+                upsert=True
+            )
+            print("Data inserted successfully:", result.upserted_id)
+            return result
+        except Exception as e:
+            print("An error occurred while inserting data:", str(e))
+            return None
+    else:
+        print("MongoDB connection is not available.")
         return None
 
 def parse_recommendations(text):
