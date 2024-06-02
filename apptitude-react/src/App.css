@@ -201,3 +201,25 @@ button[type="button"]:hover, button[type="submit"]:hover {
   background-color: #205D8C;
   color: white;
 }
+
+.recommendation {
+  margin-bottom: 20px;
+}
+
+.regenerate-button {
+  background-color: #2C97EB;
+  color: white;
+  border: none;
+  padding: 12px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  width: 60%; /* Adjust the width as needed */
+  display: block;
+  margin: 20px auto;
+}
+
+.regenerate-button:hover {
+  background-color: #205D8C;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  transition: all 0.3s ease;
+}

@@ -12,6 +12,7 @@ function App() {
   const [interactionStyles, setInteractionStyles] = useState([]);
   const [recommendations, setRecommendations] = useState(null);
   const [uploadError, setUploadError] = useState('');
+  const [ratings, setRatings] = useState({});
 
   const handleWorkStyleChange = (style, event) => {
     event.preventDefault();
@@ -50,6 +51,10 @@ function App() {
     }
   };
 
+  const handleRatingChange = (key, value) => {
+    setRatings(prev => ({ ...prev, [key]: value }));
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     const formData = new FormData();
@@ -74,9 +79,33 @@ function App() {
     }
   };
 
+  const handleRegenerate = async () => {
+    const formData = new FormData();
+    formData.append('work_pace', workPace);
+    formData.append('work_styles', JSON.stringify(workStyles));
+    formData.append('interaction_styles', JSON.stringify(interactionStyles));
+    formData.append('ratings', JSON.stringify(ratings));
+    formData.append('recommendations', JSON.stringify(recommendations));
+
+    if (resume && (resume.type === 'application/pdf' || resume.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')) {
+      formData.append('resume', resume);
+    } else {
+      setUploadError('Please upload a valid resume format (PDF or DOCX).');
+      return;
+    }
+
+    try {
+      const response = await axios.post('http://localhost:5000/regenerate', formData);
+      setRecommendations(response.data.result);
+      setUploadError('');
+    } catch (error) {
+      console.error('Error regenerating recommendations:', error);
+      setUploadError('Failed to regenerate recommendations. Please try again.');
+    }
+  };
+
   const nextStep = () => setStep(prev => prev + 1);
   const prevStep = () => setStep(prev => prev - 1);
-
 
   return (
     <div className="App">
@@ -110,7 +139,6 @@ function App() {
                 </div>
               </div>
               <div className="button-group">
-                <button type="button" onClick={prevStep} className="back-button">Back</button>
                 <button type="button" onClick={nextStep} className="next-button">Next</button>
               </div>
             </div>
@@ -216,8 +244,19 @@ function App() {
               <div key={key}>
                 <h3>{key}. {title}</h3>
                 <p style={{ fontSize: 'smaller' }}>{description}</p>
+                <label>Rating: 
+                  <input 
+                    type="number" 
+                    min="1" 
+                    max="10" 
+                    value={ratings[key] || ''} 
+                    onChange={e => handleRatingChange(key, e.target.value)} 
+                    style={{ width: '50px', marginLeft: '10px' }}
+                  />
+                </label>
               </div>
             ))}
+            <button type="button" onClick={handleRegenerate} className="regenerate-button">Regenerate Job Recommendations</button>
           </div>
         )}
       </div>

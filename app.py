@@ -173,25 +173,91 @@ def index():
         errors = form.errors
         return jsonify(errors)
 
-def read_docx(file):
-    doc = Document(file)
-    return ' '.join([paragraph.text for paragraph in doc.paragraphs])
+@app.route("/regenerate", methods=["POST"])
+def regenerate():
+    form = JobForm(request.form, meta={'csrf': False})  # Ensure CSRF is disabled
 
-def read_pdf(path):
-    pdf = PdfReader(path)
-    text = ''
-    for page in pdf.pages:
-        text += page.extract_text()
-    return text
+    # Check if the post request has the file part
+    if 'resume' not in request.files:
+        return jsonify({'error': 'No resume file part'}), 400
+    file = request.files['resume']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
 
-def generate_prompt(work_pace, work_styles, interaction_styles, resume_content):
-    # Include resume_content in your prompt
+        if filename.endswith('.pdf'):
+            text = read_pdf(filepath)
+        elif filename.endswith('.docx'):
+            text = read_docx(filepath)
+        else:
+            return jsonify({'error': 'Unsupported file type'}), 400
+
+        work_pace = request.form['work_pace']
+        work_pace_text = "relaxed pace" if int(work_pace) < 30 else "medium pace" if int(work_pace) <= 70 else "fast-paced"
+        work_styles = json.loads(request.form['work_styles'])  # Parse the JSON string
+        interaction_styles = json.loads(request.form['interaction_styles'])  # Parse the JSON string
+        ratings = json.loads(request.form['ratings'])  # Parse the JSON string
+        recommendations = json.loads(request.form['recommendations'])  # Parse the JSON string
+
+        # Use ratings to generate new prompt
+        ratings_summary = "\n".join([f"Recommendation {key}: {recommendations[key]['title']}: {value}/10" for key, value in ratings.items()])
+        prompt = generate_prompt(work_pace_text, work_styles, interaction_styles, text, ratings_summary)
+        print(prompt)
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are an excellent career consultant, in fact known as one of the best in the world. You have decades of experience matching high-potential clients with jobs that fit their experience and interests. Every one of your customers has loved the job opportunities you’ve found that fit them! You have a new client."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+        )
+        raw_recommendations = response.choices[0].message.content
+        structured_recommendations = parse_recommendations(raw_recommendations)
+        # print the recommendations
+        print(structured_recommendations)
+                # Store the ratings in the database
+        user_data = {
+            "userId": str(os.urandom(16)),  # Generate a random ID for the user
+            "preferences": {
+                "workPace": work_pace_text,
+                "workStyle": work_styles,
+                "interactionStyle": interaction_styles,
+                "location": "Unknown"
+            },
+            "resume": {
+                "originalFilename": filename,
+                "parsedText": text
+            },
+            "recommendations": structured_recommendations,
+            "ratings": ratings
+        }
+        insert_user_data(user_data)
+        return jsonify({"result": structured_recommendations})
+
+    else:
+        errors = form.errors
+        return jsonify(errors)
+    
+
+def generate_prompt(work_pace, work_styles, interaction_styles, resume_content, ratings_summary=None):
+    # Include resume_content and ratings_summary in your prompt
+    ratings_text = f"\nPrevious ratings:\n{ratings_summary}" if ratings_summary else ""
     return f"""
     Your client enjoys a pace of work that is {work_pace} and has a strong preference to work in the following styles: {work_styles}. Your client also enjoys the following day-to-day interactions in their job: {interaction_styles}.
     
     The client's resume content is as follows:
 
     {resume_content}
+    
+    {ratings_text}
 
     You need to generate five job recommendations for this new client that is most fitting to them based on their background, preferences and goals. Your recommendations should include the job title, and 3-4 sentences about why this job is fitting for the client. Be as specific as possible to the client’s preferences and resume. Here is an example output of a different client that used you in the past. Please use the same format (numbered 1,2,3,4,5). Keep in mind this is NOT your current client: 
 
