@@ -4,12 +4,13 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, FileField, validators
 from werkzeug.utils import secure_filename
 from docx import Document
-from PyPDF2 import PdfReader
+from PyPDF2 import PdfFileReader 
 import openai
 import logging
 from dotenv import load_dotenv
 from flask_cors import CORS
-import json 
+import json
+from pymongo import MongoClient
 
 load_dotenv() 
 from pymongo import MongoClient
@@ -33,7 +34,6 @@ openai.api_key = os.environ.get("OPENAI_API_KEY")
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'pdf', 'docx'}
 
@@ -42,7 +42,7 @@ def read_docx(file):
     return ' '.join([paragraph.text for paragraph in doc.paragraphs])
 
 def read_pdf(path):
-    pdf = PdfReader(path)
+    pdf = PdfFileReader(path) 
     text = ''
     for page in pdf.pages:
         text += page.extract_text()
