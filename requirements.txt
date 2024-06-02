@@ -32,5 +32,6 @@ tqdm==4.62.3
 urllib3==1.26.7
 Werkzeug==2.0.2
 pymongo[srv]
-dnspython
+dnspython   
+setuptools>=46.0.0
 

@@ -1,6 +1,5 @@
 import os
-import ssl
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, FileField, validators
 from werkzeug.utils import secure_filename
@@ -14,16 +13,14 @@ import json
 from pymongo import MongoClient
 
 load_dotenv() 
-from pymongo import MongoClient
-
-app = Flask(__name__)
+app = Flask(__name__, static_folder='build', static_url_path='')
 CORS(app)
 app.config['SECRET_KEY'] = 'mytemporarykey'
 app.config['UPLOAD_FOLDER'] = 'C:/Users/Josh Benadiva/git/Apptitude/uploads'
 app.config['MONGO_URI'] = os.getenv('MONGO_URI')
 
 try:
-    client = MongoClient(app.config['MONGO_URI'], serverSelectionTimeoutMS=5000, ssl=True, ssl_cert_reqs=ssl.CERT_NONE)
+    client = MongoClient(app.config['MONGO_URI'], serverSelectionTimeoutMS=5000)
     client.server_info()
     print("Connected to MongoDB")
 except Exception as e:
@@ -282,6 +279,10 @@ def generate_prompt(work_pace, work_styles, interaction_styles, resume_content, 
 
 5. Startup Founder/Co-founder: Given your entrepreneurial studies at Wharton, along with your experience as a founding team member at Giraffe Invest, you might consider launching your own venture.
     """
+
+@app.route('/', methods=['GET'])
+def serve_react_app():
+    return send_from_directory(app.static_folder, 'index.html')
 
 if __name__ == "__main__":
     app.run(debug=True)
