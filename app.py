@@ -5,13 +5,13 @@ from wtforms import StringField, SubmitField, FileField, validators
 from werkzeug.utils import secure_filename
 from docx import Document
 from PyPDF2 import PdfReader
-from openai import OpenAI
+import openai
 import logging
 from dotenv import load_dotenv
 from flask_cors import CORS
-import json  # Added import for JSON parsing
+import json 
 
-load_dotenv()  # This loads the environment variables from the .env file into the environment
+load_dotenv() 
 from pymongo import MongoClient
 
 app = Flask(__name__)
@@ -29,11 +29,10 @@ except Exception as e:
 
 db = client.apptitude  # Assume 'apptitude' is the correct database name
 
-client = OpenAI(
-    api_key=os.environ.get("OPENAI_API_KEY"),
-)
+openai.api_key = os.environ.get("OPENAI_API_KEY")
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'pdf', 'docx'}
